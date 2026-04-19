@@ -9,7 +9,7 @@ export type OCRResult = {
   receiver_name: string;
 };
 
-export type Provider = 'gemini' | 'mistral' | 'deepseek' | 'typhoon';
+export type Provider = 'gemini' | 'mistral' | 'deepseek' | 'typhoon' | 'ocrspace';
 
 const SYSTEM_PROMPT = `You are a Thai bank slip OCR expert. 
 Extract the following information from the bank slip image and return it as JSON:
@@ -26,7 +26,7 @@ Return ONLY valid JSON. If a field is not found, use an empty string.`;
 
 export async function performOCR(provider: Provider, imageData: string): Promise<OCRResult> {
   const apiKey = import.meta.env[`VITE_${provider.toUpperCase()}_API_KEY`];
-  
+
   if (!apiKey) {
     throw new Error(`API Key for ${provider} is missing in .env`);
   }
@@ -43,6 +43,8 @@ export async function performOCR(provider: Provider, imageData: string): Promise
       return callTyphoon(apiKey, base64Content);
     case 'deepseek':
       return callDeepseek(apiKey, base64Content);
+    case 'ocrspace':
+      return callOCRSpace(apiKey, imageData);
     default:
       throw new Error(`Provider ${provider} not implemented`);
   }
@@ -62,7 +64,7 @@ async function callGemini(apiKey: string, base64: string): Promise<OCRResult> {
       }]
     })
   });
-  
+
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
   return parseJSON(text);
@@ -134,6 +136,38 @@ async function callDeepseek(apiKey: string, _base64: string): Promise<OCRResult>
   return {
     transaction_id: 'NOT_SUPPORTED',
     amount: 0,
+    date: '',
+    time: '',
+    sender_bank: '',
+    sender_name: '',
+    receiver_bank: '',
+    receiver_name: ''
+  };
+}
+
+async function callOCRSpace(apiKey: string, imageData: string): Promise<OCRResult> {
+  const formData = new FormData();
+  // OCRSpace accepts base64 with data URI prefix
+  formData.append('base64image', imageData);
+  formData.append('language', 'th');
+  formData.append('apikey', apiKey);
+  formData.append('isOverlayRequired', 'true');
+  formData.append('filetype', 'jpg');
+
+  const response = await fetch('https://api.ocr.space/parse/image', {
+    method: 'POST',
+    body: formData
+  });
+
+  const data = await response.json();
+  console.log(data)
+  const text = data.ParsedResults?.[0]?.ParsedText || '';
+
+  // Since OCRSpace returns raw text, we'll do basic parsing for the POC
+  // In a real app, you'd send this text to an LLM to structure it.
+  return {
+    transaction_id: text.match(/Ref No\.?\s*(\w+)/i)?.[1] || 'Parsed from OCRSpace',
+    amount: text.match(/(\d+\,?\d*\.?\d*)\s*(THB|บาท)/i)?.[1] || '',
     date: '',
     time: '',
     sender_bank: '',
