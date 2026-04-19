@@ -71,4 +71,11 @@ XXX XXX 5740
     expect(extractThaiSlipData(texts[1]).transaction_id).toBe('999888777');
     expect(extractThaiSlipData(texts[2]).transaction_id).toBe('ABC123XYZ');
   });
+  it('should not confuse currency decimals with dates', () => {
+    const rawText = `ค่าธรรมเนียม
+0.00 บาท
+07 ก.ค. 2568 - 12:10`;
+    const result = extractThaiSlipData(rawText);
+    expect(result.date).toBe('07 ก.ค. 2568');
+  });
 });

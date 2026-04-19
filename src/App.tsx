@@ -71,14 +71,15 @@ export default function App() {
   return (
     <div className="app">
       <header>
+        <img src="/logo.webp" alt="MijPao Logo" className="logo" />
         <motion.h1
           className="title"
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          MijPao OCR <span className="badge badge-new">POC</span>
+          Thai Slip OCR
         </motion.h1>
-        <p className="subtitle">ระบบวิเคราะห์สลิปธนาคารด้วย AI</p>
+        <p className="subtitle">อัพโหลดสลิปเพื่อดึงข้อมูล</p>
       </header>
 
       <motion.div
@@ -106,17 +107,21 @@ export default function App() {
           <h2 style={{ marginBottom: "1.5rem" }}>อัปโหลดสลิป</h2>
 
           <div className="provider-chips">
-            {(["mistral", "typhoon", "glm", "qwen", "ocrspace"] as Provider[]).map(
-              (p) => (
-                <button
-                  key={p}
-                  className={`chip ${provider === p ? "active" : ""}`}
-                  onClick={() => setProvider(p)}
-                >
-                  {p === "glm" ? "GLM" : p === "ocrspace" ? "OCR Space" : p.charAt(0).toUpperCase() + p.slice(1)}
-                </button>
-              ),
-            )}
+            {(
+              ["mistral", "typhoon", "glm", "qwen", "ocrspace"] as Provider[]
+            ).map((p) => (
+              <button
+                key={p}
+                className={`chip ${provider === p ? "active" : ""}`}
+                onClick={() => setProvider(p)}
+              >
+                {p === "glm"
+                  ? "GLM"
+                  : p === "ocrspace"
+                    ? "OCR Space"
+                    : p.charAt(0).toUpperCase() + p.slice(1)}
+              </button>
+            ))}
           </div>
 
           <div
