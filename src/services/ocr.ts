@@ -10,7 +10,7 @@ export type OCRResult = {
   raw_data?: string;
 };
 
-export type Provider = 'mistral' | 'glm' | 'typhoon' | 'ocrspace';
+export type Provider = 'mistral' | 'glm' | 'typhoon' | 'qwen' | 'ocrspace';
 
 const SYSTEM_PROMPT = `You are a Thai bank slip OCR expert. 
 Extract the following information from the bank slip image and return it as JSON:
@@ -43,6 +43,8 @@ export async function performOCR(provider: Provider, imageData: string): Promise
       return callTyphoon(apiKey, base64Content);
     case 'glm':
       return callGLM(apiKey, base64Content);
+    case 'qwen':
+      return callQwen(apiKey, base64Content);
     case 'ocrspace':
       return callOCRSpace(apiKey, imageData);
     default:
@@ -167,6 +169,42 @@ async function callGLM(apiKey: string, base64: string): Promise<OCRResult> {
 }
 
 
+async function callQwen(apiKey: string, base64: string): Promise<OCRResult> {
+  const url = 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions';
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'qwen-vl-ocr',
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64}`
+              }
+            },
+            {
+              type: 'text',
+              text: 'Extract all text from this Thai bank slip accurately.'
+            }
+          ]
+        }
+      ]
+    })
+  });
+
+  const data = await response.json();
+  const text = data.choices?.[0]?.message?.content || '';
+  return { ...extractThaiSlipData(text, data), raw_data: JSON.stringify(data, null, 2) };
+}
+
+
 async function callOCRSpace(apiKey: string, imageData: string): Promise<OCRResult> {
   const formData = new FormData();
   formData.append('base64image', imageData);
@@ -199,10 +237,10 @@ function extractThaiSlipData(text: string, rawData: any): OCRResult {
   const clean = (s: string) => s.replace(/[*#]/g, '').trim();
   const isDate = (str: string) => /(\d{1,2}\s+[\u0E00-\u0E7F.]+\s+\d{2,4})|(\d{1,2}\s+[A-Z][a-z]{2}\s+\d{2,4})|(\d{1,2}[:.]\d{2})/.test(str);
   const isAmount = (str: string) => /[\d,]+\.\d{2}/.test(str);
-  const isBank = (str: string) => /(ธนาคาร|ธ\.|Prompt\s*Pay|Pay|K\+|KBank|SCB|BBL|KTB|BAY|TTB|TMB|GSB|BAAC|Method|รหัสพร้อมเพย์|Prompt)/i.test(str);
+  const isBank = (str: string) => /(ธนาคาร|ธ\.|Prompt\s*Pay|Pay|K\+|KBank|SCB|BBL|KTB|BAY|TTB|TMB|GSB|BAAC|Method|รหัสพร้อมเพย์|Prompt|กรุงไทย|กสิกร|ไทยพาณิชย์|กรุงเทพ|กรุงศรี|ทหารไทย|ออมสิน|ธ\.ก\.ส\.)/i.test(str);
   const isName = (str: string) => {
     const s = clean(str);
-    if (!s || s.length < 4 || isBank(s) || isDate(s) || isAmount(s) || s.includes('XXX') || s.includes('รายการ')) return false;
+    if (!s || s.length < 4 || isBank(s) || isDate(s) || isAmount(s) || s.includes('XXX') || s.includes('รายการ') || s.includes('รหัส') || s.includes('สำเร็จ')) return false;
     return /^(นาย|นาง|น\.ส\.|บริษัท|หจก\.|Mr\.|Mrs\.|Ms\.)/i.test(s) || (s.split(' ').length >= 2 && s.length > 5);
   };
 
@@ -255,13 +293,15 @@ function extractThaiSlipData(text: string, rawData: any): OCRResult {
   }
 
   return {
-    transaction_id: text.match(/(?:รหัสอ้างอิง|รายการ:|Ref(?:\.\s*no\.)?|Reference\s*no\.?)\s*[:-\s|]*([A-Za-z0-9]{4,25})/i)?.[1] || '',
+    transaction_id: text.match(/(?:รหัสอ้างอิง|รหัสอาเจ็ง|รายการ:|Ref(?:\.\s*no\.)?|Reference\s*no\.?)\s*[:-\s|]*([A-Za-z0-9]{4,25})/i)?.[1] || '',
     amount: text.match(/(?:จำนวนเงิน|จำนวน|Amount|Total):\s*[:-\s|]*([\d,]+\.\d{2})/i)?.[1]?.replace(/,/g, '') || 
             text.match(/([\d,]+\.\d{2})\s*(?:บาท|THB)/i)?.[1]?.replace(/,/g, '') ||
             text.match(/^\s*([\d,]+\.\d{2})\s*$/m)?.[1]?.replace(/,/g, '') || '',
     date: text.match(/(\d{1,2}\s+[\u0E00-\u0E7F.]+\s+\d{2,4})/)?.[1] || 
           text.match(/(\d{1,2}\s+[A-Z][a-z]{2}\s+\d{2,4})/)?.[1] || '',
-    time: text.match(/(\d{1,2}[:.]\d{2}(?:\s*[AP]M)?)/i)?.[1]?.replace('.', ':') || '',
+    time: text.match(/(\d{1,2}:\d{2}(?:\s*[AP]M)?)/i)?.[1] || 
+          text.match(/(\d{1,2}[:.]\d{2})\s*(?:$|\n)/)?.[1]?.replace('.', ':') || 
+          text.match(/-\s*(\d{1,2}[:.]\d{2})/)?.[1]?.replace('.', ':') || '',
     sender_bank: clean(sender_bank),
     sender_name: clean(sender_name),
     receiver_bank: clean(receiver_bank),

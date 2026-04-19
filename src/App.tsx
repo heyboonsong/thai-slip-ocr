@@ -106,7 +106,7 @@ export default function App() {
           <h2 style={{ marginBottom: "1.5rem" }}>อัปโหลดสลิป</h2>
 
           <div className="provider-chips">
-            {(["mistral", "typhoon", "glm", "ocrspace"] as Provider[]).map(
+            {(["mistral", "typhoon", "glm", "qwen", "ocrspace"] as Provider[]).map(
               (p) => (
                 <button
                   key={p}
