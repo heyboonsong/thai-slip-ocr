@@ -196,8 +196,7 @@ export async function performOCR(provider: Provider, imageData: string): Promise
   const base64 = imageData.split(',')[1] || imageData;
   const { text, data, extra } = await IO[provider](apiKey, base64);
   
-  const initialResult = extractThaiSlipData(text);
-  const resultWithRaw = { ...initialResult, raw_data: JSON.stringify(data, null, 2) };
+  const resultWithRaw = extractThaiSlipData(text);
 
   // Provider-specific composition
   const enhancers: Record<Provider, (res: OCRResult) => OCRResult> = {
