@@ -12,19 +12,6 @@ export type OCRResult = {
 
 export type Provider = 'mistral' | 'glm' | 'typhoon' | 'qwen' | 'ocrspace';
 
-const SYSTEM_PROMPT = `You are a Thai bank slip OCR expert. 
-Extract the following information from the bank slip image and return it as JSON:
-- transaction_id: The reference number or transaction ID
-- amount: Total amount transferred (number or string)
-- date: Date of transaction (YYYY-MM-DD or as found)
-- time: Time of transaction (HH:mm)
-- sender_bank: Name of the sender's bank
-- sender_name: Name of the sender
-- receiver_bank: Name of the receiver's bank
-- receiver_name: Name of the receiver
-
-Return ONLY valid JSON. If a field is not found, use an empty string.`;
-
 export async function performOCR(provider: Provider, imageData: string): Promise<OCRResult> {
   const apiKey = import.meta.env[`VITE_${provider.toUpperCase()}_API_KEY`];
 
