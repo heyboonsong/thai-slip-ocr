@@ -10,7 +10,7 @@ export type OCRResult = {
   raw_data?: string;
 };
 
-export type Provider = 'gemini' | 'mistral' | 'deepseek' | 'typhoon' | 'ocrspace';
+export type Provider = 'gemini' | 'mistral' | 'glm' | 'typhoon' | 'ocrspace';
 
 const SYSTEM_PROMPT = `You are a Thai bank slip OCR expert. 
 Extract the following information from the bank slip image and return it as JSON:
@@ -42,8 +42,8 @@ export async function performOCR(provider: Provider, imageData: string): Promise
       return callMistral(apiKey, base64Content);
     case 'typhoon':
       return callTyphoon(apiKey, base64Content);
-    case 'deepseek':
-      return callDeepseek(apiKey, base64Content);
+    case 'glm':
+      return callGLM(apiKey, base64Content);
     case 'ocrspace':
       return callOCRSpace(apiKey, imageData);
     default:
@@ -130,21 +130,66 @@ async function callMistral(apiKey: string, base64: string): Promise<OCRResult> {
   return { ...parseJSON(text), raw_data: JSON.stringify(data, null, 2) };
 }
 
-async function callDeepseek(apiKey: string, _base64: string): Promise<OCRResult> {
-  // Deepseek currently doesn't have a public vision API in their main endpoint.
-  // This is a placeholder for when they release it or if using a compatible shim.
-  console.warn('Deepseek Vision API is not yet publicly available. Returning empty result.');
+async function callGLM(apiKey: string, base64: string): Promise<OCRResult> {
+  const url = 'https://api.z.ai/api/paas/v4/layout_parsing';
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify({
+      model: 'glm-ocr',
+      file: `data:image/png;base64,${base64}`,
+    })
+  });
+
+  const data = await response.json();
+  const contents = data.layout_details?.[0]?.map((item: any) => item.content) || [];
+  const fullText = data.md_results || contents.join('\n');
+
+  // Extract amount - look for number followed by "บาท"
+  const amountMatch = fullText.match(/(\d{1,3}(?:[,\s]\d{3})*(?:\.\s*\d{2}))\s*บาท/);
+  const amount = amountMatch ? amountMatch[1].replace(/[\s,]/g, '') : '';
+
+  // Extract transaction ID - typically a long alphanumeric string
+  const txIdMatch = fullText.match(/[A-Z0-9]{15,25}/);
+  const transaction_id = txIdMatch ? txIdMatch[0] : '';
+
+  // Extract date and time
+  // Example: "1 เมน.ป. 69 19:14 ป."
+  const dateTimeMatch = fullText.match(/(\d{1,2}\s+[ก-ฮ.]{2,}\s+\d{2,4})\s+(\d{1,2}[:.]\d{2})/);
+  const date = dateTimeMatch ? dateTimeMatch[1] : '';
+  const time = dateTimeMatch ? dateTimeMatch[2].replace('.', ':') : '';
+
+  // Heuristic for names: sender is usually before receiver
+  // In many layouts, names follow specific keywords or indices
+  let sender_name = '';
+  let receiver_name = '';
+  let sender_bank = '';
+  let receiver_bank = '';
+
+  // Try to find names in contents based on common indices if structure matches
+  if (contents.length >= 12) {
+    sender_name = contents[4] || '';
+    sender_bank = contents[5] || '';
+    receiver_name = contents[9] || '';
+    receiver_bank = contents[10] || '';
+  }
+
   return {
-    transaction_id: 'NOT_SUPPORTED',
-    amount: 0,
-    date: '',
-    time: '',
-    sender_bank: '',
-    sender_name: '',
-    receiver_bank: '',
-    receiver_name: ''
+    transaction_id,
+    amount,
+    date,
+    time,
+    sender_bank,
+    sender_name,
+    receiver_bank,
+    receiver_name,
+    raw_data: JSON.stringify(data, null, 2)
   };
 }
+
 
 async function callOCRSpace(apiKey: string, imageData: string): Promise<OCRResult> {
   const formData = new FormData();
