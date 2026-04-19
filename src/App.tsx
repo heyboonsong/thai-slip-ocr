@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Upload,
@@ -24,9 +24,16 @@ export default function App() {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [provider, setProvider] = useState<Provider>("gemini");
+  const [provider, setProvider] = useState<Provider>(() => {
+    const saved = localStorage.getItem("selected_provider");
+    return (saved as Provider) || "gemini";
+  });
   const [data, setData] = useState<OCRResult>(INITIAL_DATA);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    localStorage.setItem("selected_provider", provider);
+  }, [provider]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -290,18 +297,39 @@ export default function App() {
             </div>
           </div>
 
+          <div className="input-group full" style={{ marginTop: "1rem" }}>
+            <label>Raw Data (JSON/Text)</label>
+            <textarea
+              readOnly
+              value={data.raw_data || ""}
+              style={{
+                width: "100%",
+                height: "120px",
+                background: "var(--surface-low)",
+                border: "1px solid var(--surface-highest)",
+                borderRadius: "0.5rem",
+                padding: "0.5rem",
+                fontSize: "0.75rem",
+                fontFamily: "monospace",
+                color: "var(--text-secondary)",
+                resize: "vertical",
+              }}
+            />
+          </div>
+
           <button
             className="button"
             style={{
               background: "var(--surface-low)",
               border: "1px solid var(--surface-highest)",
               color: "var(--text-primary)",
-              height: "3rem",
-              fontSize: "0.9rem",
+              height: "2.5rem",
+              fontSize: "0.85rem",
+              marginTop: "0.75rem",
             }}
             onClick={() => setData(INITIAL_DATA)}
           >
-            <RefreshCcw size={16} />
+            <RefreshCcw size={14} />
             ล้างข้อมูล
           </button>
         </motion.section>

@@ -7,6 +7,7 @@ export type OCRResult = {
   sender_name: string;
   receiver_bank: string;
   receiver_name: string;
+  raw_data?: string;
 };
 
 export type Provider = 'gemini' | 'mistral' | 'deepseek' | 'typhoon' | 'ocrspace';
@@ -67,7 +68,7 @@ async function callGemini(apiKey: string, base64: string): Promise<OCRResult> {
 
   const data = await response.json();
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return parseJSON(text);
+  return { ...parseJSON(text), raw_data: JSON.stringify(data, null, 2) };
 }
 
 async function callTyphoon(apiKey: string, base64: string): Promise<OCRResult> {
@@ -95,7 +96,7 @@ async function callTyphoon(apiKey: string, base64: string): Promise<OCRResult> {
 
   const data = await response.json();
   const text = data.choices?.[0]?.message?.content || '';
-  return parseJSON(text);
+  return { ...parseJSON(text), raw_data: JSON.stringify(data, null, 2) };
 }
 
 async function callMistral(apiKey: string, base64: string): Promise<OCRResult> {
@@ -126,7 +127,7 @@ async function callMistral(apiKey: string, base64: string): Promise<OCRResult> {
 
   const data = await response.json();
   const text = data.choices?.[0]?.message?.content || '';
-  return parseJSON(text);
+  return { ...parseJSON(text), raw_data: JSON.stringify(data, null, 2) };
 }
 
 async function callDeepseek(apiKey: string, _base64: string): Promise<OCRResult> {
@@ -147,12 +148,12 @@ async function callDeepseek(apiKey: string, _base64: string): Promise<OCRResult>
 
 async function callOCRSpace(apiKey: string, imageData: string): Promise<OCRResult> {
   const formData = new FormData();
-  // OCRSpace accepts base64 with data URI prefix
   formData.append('base64image', imageData);
-  formData.append('language', 'th');
+  formData.append('language', 'tha');
   formData.append('apikey', apiKey);
   formData.append('isOverlayRequired', 'true');
   formData.append('filetype', 'jpg');
+  formData.append('OCREngine', '2');
 
   const response = await fetch('https://api.ocr.space/parse/image', {
     method: 'POST',
@@ -160,20 +161,28 @@ async function callOCRSpace(apiKey: string, imageData: string): Promise<OCRResul
   });
 
   const data = await response.json();
-  console.log(data)
   const text = data.ParsedResults?.[0]?.ParsedText || '';
+  const lines = text.split('\n').map((l: string) => l.trim());
 
-  // Since OCRSpace returns raw text, we'll do basic parsing for the POC
-  // In a real app, you'd send this text to an LLM to structure it.
+  // Mapping logic based on Thai slip structure from OCR Space
+  const findNextAfter = (marker: string) => {
+    const idx = lines.findIndex((l: string) => l.includes(marker));
+    return idx !== -1 && lines[idx + 1] ? lines[idx + 1] : '';
+  };
+
+  const dateTimeLine = lines[lines.length - 1] || '';
+  const [dateStr, timeStr] = dateTimeLine.split('-').map((s: string) => s.trim());
+
   return {
-    transaction_id: text.match(/Ref No\.?\s*(\w+)/i)?.[1] || 'Parsed from OCRSpace',
-    amount: text.match(/(\d+\,?\d*\.?\d*)\s*(THB|บาท)/i)?.[1] || '',
-    date: '',
-    time: '',
-    sender_bank: '',
-    sender_name: '',
-    receiver_bank: '',
-    receiver_name: ''
+    transaction_id: text.match(/รหัสอ้างอิง\s*([A-Za-z0-9]+)/)?.[1] || '',
+    amount: text.match(/([\d,]+\.\d{2})\s*บาท/)?.[1] || '',
+    date: dateStr || '',
+    time: timeStr || '',
+    sender_bank: findNextAfter('จาก') ? lines[lines.indexOf(findNextAfter('จาก')) + 1] : '',
+    sender_name: findNextAfter('จาก'),
+    receiver_bank: findNextAfter('ไปยัง') ? lines[lines.indexOf(findNextAfter('ไปยัง')) + 1] : '',
+    receiver_name: findNextAfter('ไปยัง'),
+    raw_data: JSON.stringify(data, null, 2)
   };
 }
 
