@@ -6,6 +6,8 @@ import {
   CheckCircle,
   AlertCircle,
   RefreshCcw,
+  Database,
+  FileText,
 } from "lucide-react";
 import { performOCR, OCRResult, Provider } from "./services/ocr";
 
@@ -24,6 +26,7 @@ export default function App() {
   const [image, setImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"prefill" | "raw">("raw");
   const [provider, setProvider] = useState<Provider>(() => {
     const saved = localStorage.getItem("selected_provider");
     return (saved as Provider) || "gemini";
@@ -196,126 +199,147 @@ export default function App() {
             )}
           </div>
 
-          <div className="form-grid">
-            <div className="input-group">
-              <label>จำนวนเงิน (บาท)</label>
-              <input
-                value={data.amount}
-                onChange={(e) => handleInputChange("amount", e.target.value)}
-                placeholder="0.00"
-              />
-            </div>
-            <div className="input-group">
-              <label>เลขที่รายการ (Ref ID)</label>
-              <input
-                value={data.transaction_id}
-                onChange={(e) =>
-                  handleInputChange("transaction_id", e.target.value)
-                }
-                placeholder="เลขที่อ้างอิง"
-              />
-            </div>
-            <div className="input-group">
-              <label>วันที่</label>
-              <input
-                value={data.date}
-                onChange={(e) => handleInputChange("date", e.target.value)}
-                placeholder="วว/ดด/ปปปป"
-              />
-            </div>
-            <div className="input-group">
-              <label>เวลา</label>
-              <input
-                value={data.time}
-                onChange={(e) => handleInputChange("time", e.target.value)}
-                placeholder="00:00"
-              />
-            </div>
-
-            <div className="input-group full">
-              <hr
-                style={{
-                  border: "none",
-                  borderTop: "1px solid var(--surface-highest)",
-                  margin: "0.5rem 0",
-                }}
-              />
-              <label>ข้อมูลผู้โอน</label>
-            </div>
-
-            <div className="input-group">
-              <label>ธนาคาร</label>
-              <input
-                value={data.sender_bank}
-                onChange={(e) =>
-                  handleInputChange("sender_bank", e.target.value)
-                }
-                placeholder="ชื่อธนาคาร"
-              />
-            </div>
-            <div className="input-group">
-              <label>ชื่อผู้โอน</label>
-              <input
-                value={data.sender_name}
-                onChange={(e) =>
-                  handleInputChange("sender_name", e.target.value)
-                }
-                placeholder="ชื่อ-นามสกุล"
-              />
-            </div>
-
-            <div className="input-group full">
-              <hr
-                style={{
-                  border: "none",
-                  borderTop: "1px solid var(--surface-highest)",
-                  margin: "0.5rem 0",
-                }}
-              />
-              <label>ข้อมูลผู้รับโอน</label>
-            </div>
-
-            <div className="input-group">
-              <label>ธนาคาร</label>
-              <input
-                value={data.receiver_bank}
-                onChange={(e) =>
-                  handleInputChange("receiver_bank", e.target.value)
-                }
-                placeholder="ชื่อธนาคาร"
-              />
-            </div>
-            <div className="input-group">
-              <label>ชื่อผู้รับโอน</label>
-              <input
-                value={data.receiver_name}
-                onChange={(e) =>
-                  handleInputChange("receiver_name", e.target.value)
-                }
-                placeholder="ชื่อ-นามสกุล"
-              />
-            </div>
+          <div className="tabs">
+            <button
+              className={`tab-button ${activeTab === "raw" ? "active" : ""}`}
+              onClick={() => setActiveTab("raw")}
+            >
+              <FileText size={16} />
+              Raw Data
+            </button>
+            <button
+              className={`tab-button ${activeTab === "prefill" ? "active" : ""}`}
+              onClick={() => setActiveTab("prefill")}
+            >
+              <Database size={16} />
+              Pre-filling
+            </button>
           </div>
 
-          <div className="input-group full" style={{ marginTop: "1rem" }}>
-            <label>Raw Data (JSON/Text)</label>
-            <textarea
-              readOnly
-              value={data.raw_data || ""}
-              style={{
-                width: "100%",
-                height: "120px",
-                background: "var(--surface-low)",
-                border: "1px solid var(--surface-highest)",
-                borderRadius: "0.5rem",
-                padding: "0.5rem",
-                fontSize: "0.75rem",
-                fontFamily: "monospace",
-                color: "var(--text-secondary)",
-                resize: "vertical",
-              }}
-            />
-          </div>
+          {activeTab === "prefill" ? (
+            <div className="form-grid">
+              <div className="input-group">
+                <label>จำนวนเงิน (บาท)</label>
+                <input
+                  value={data.amount}
+                  onChange={(e) => handleInputChange("amount", e.target.value)}
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="input-group">
+                <label>เลขที่รายการ (Ref ID)</label>
+                <input
+                  value={data.transaction_id}
+                  onChange={(e) =>
+                    handleInputChange("transaction_id", e.target.value)
+                  }
+                  placeholder="เลขที่อ้างอิง"
+                />
+              </div>
+              <div className="input-group">
+                <label>วันที่</label>
+                <input
+                  value={data.date}
+                  onChange={(e) => handleInputChange("date", e.target.value)}
+                  placeholder="วว/ดด/ปปปป"
+                />
+              </div>
+              <div className="input-group">
+                <label>เวลา</label>
+                <input
+                  value={data.time}
+                  onChange={(e) => handleInputChange("time", e.target.value)}
+                  placeholder="00:00"
+                />
+              </div>
+
+              <div className="input-group full">
+                <hr
+                  style={{
+                    border: "none",
+                    borderTop: "1px solid var(--surface-highest)",
+                    margin: "0.5rem 0",
+                  }}
+                />
+                <label>ข้อมูลผู้โอน</label>
+              </div>
+
+              <div className="input-group">
+                <label>ธนาคาร</label>
+                <input
+                  value={data.sender_bank}
+                  onChange={(e) =>
+                    handleInputChange("sender_bank", e.target.value)
+                  }
+                  placeholder="ชื่อธนาคาร"
+                />
+              </div>
+              <div className="input-group">
+                <label>ชื่อผู้โอน</label>
+                <input
+                  value={data.sender_name}
+                  onChange={(e) =>
+                    handleInputChange("sender_name", e.target.value)
+                  }
+                  placeholder="ชื่อ-นามสกุล"
+                />
+              </div>
+
+              <div className="input-group full">
+                <hr
+                  style={{
+                    border: "none",
+                    borderTop: "1px solid var(--surface-highest)",
+                    margin: "0.5rem 0",
+                  }}
+                />
+                <label>ข้อมูลผู้รับโอน</label>
+              </div>
+
+              <div className="input-group">
+                <label>ธนาคาร</label>
+                <input
+                  value={data.receiver_bank}
+                  onChange={(e) =>
+                    handleInputChange("receiver_bank", e.target.value)
+                  }
+                  placeholder="ชื่อธนาคาร"
+                />
+              </div>
+              <div className="input-group">
+                <label>ชื่อผู้รับโอน</label>
+                <input
+                  value={data.receiver_name}
+                  onChange={(e) =>
+                    handleInputChange("receiver_name", e.target.value)
+                  }
+                  placeholder="ชื่อ-นามสกุล"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="input-group full">
+              <label>Raw OCR Text</label>
+              <textarea
+                readOnly
+                value={data.raw_data || ""}
+                placeholder="ประมวลผลสลิปเพื่อดูข้อมูลดิบ..."
+                style={{
+                  width: "100%",
+                  height: "360px",
+                  background: "var(--surface-low)",
+                  border: "1px solid var(--surface-highest)",
+                  borderRadius: "0.75rem",
+                  padding: "1rem",
+                  fontSize: "0.85rem",
+                  fontFamily: "monospace",
+                  lineHeight: "1.6",
+                  color: "var(--text-secondary)",
+                  resize: "none",
+                }}
+              />
+            </div>
+          )}
 
           <button
             className="button"
@@ -325,7 +349,7 @@ export default function App() {
               color: "var(--text-primary)",
               height: "2.5rem",
               fontSize: "0.85rem",
-              marginTop: "0.75rem",
+              marginTop: "1.5rem",
             }}
             onClick={() => setData(INITIAL_DATA)}
           >
