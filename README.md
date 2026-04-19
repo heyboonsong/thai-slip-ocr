@@ -8,13 +8,13 @@ This tool allows users to upload Thai bank slip images and compare extraction re
 
 ## 🧠 Supported AI Providers & Models
 
-| Provider | Model | Documentation |
+| Provider | Model | Documentation & Reference |
 | :--- | :--- | :--- |
-| **Mistral AI** | `mistral-ocr-latest` | [Mistral OCR Docs](https://docs.mistral.ai/capabilities/ocr/) |
-| **Qwen (Alibaba)** | `qwen-vl-ocr` | [DashScope Docs](https://help.aliyun.com/zh/dashscope/user-guide/vision-language-models) |
-| **OpenTyphoon** | `typhoon-ocr-preview` | [OpenTyphoon Portal](https://opentyphoon.ai/) |
-| **Zhipu AI (GLM)** | `glm-ocr` | [Zhipu AI Open Platform](https://open.bigmodel.cn/) |
-| **OCR.space** | `Engine 2` | [OCR.space API](https://ocr.space/ocrapi) |
+| **Mistral AI** | `mistral-ocr-latest` | [Mistral OCR](https://mistral.ai/news/mistral-ocr) |
+| **Qwen (Alibaba)** | `qwen-vl-ocr` | [Qwen-VL-OCR](https://www.qwencloud.com/models/qwen-vl-ocr) |
+| **OpenTyphoon** | `typhoon-ocr-preview` | [Typhoon OCR](https://opentyphoon.ai/model/typhoon-ocr) |
+| **Zhipu AI (GLM)** | `glm-ocr` | [GLM-OCR Repository](https://github.com/zai-org/GLM-OCR) |
+| **OCR.space** | `Engine 2` | [OCR.space API](https://ocr.space/OCRAPI) |
 
 ## 🛠 Features
 
@@ -64,3 +64,11 @@ npm run dev
 ## 📄 License
 
 MIT
+
+## 🔗 Research & References
+
+- **GLM-OCR**: [github.com/zai-org/GLM-OCR](https://github.com/zai-org/GLM-OCR)
+- **Mistral OCR**: [mistral.ai/news/mistral-ocr](https://mistral.ai/news/mistral-ocr)
+- **Typhoon OCR**: [opentyphoon.ai/model/typhoon-ocr](https://opentyphoon.ai/model/typhoon-ocr)
+- **OCR.space**: [ocr.space/OCRAPI](https://ocr.space/OCRAPI)
+- **Qwen-VL-OCR**: [qwencloud.com/models/qwen-vl-ocr](https://www.qwencloud.com/models/qwen-vl-ocr)
