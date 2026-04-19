@@ -29,7 +29,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<"prefill" | "raw">("raw");
   const [provider, setProvider] = useState<Provider>(() => {
     const saved = localStorage.getItem("selected_provider");
-    return (saved as Provider) || "gemini";
+    return (saved as Provider) || "mistral";
   });
   const [data, setData] = useState<OCRResult>(INITIAL_DATA);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -106,7 +106,7 @@ export default function App() {
           <h2 style={{ marginBottom: "1.5rem" }}>อัปโหลดสลิป</h2>
 
           <div className="provider-chips">
-            {(["gemini", "mistral", "typhoon", "glm", "ocrspace"] as Provider[]).map(
+            {(["mistral", "typhoon", "glm", "ocrspace"] as Provider[]).map(
               (p) => (
                 <button
                   key={p}

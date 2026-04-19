@@ -10,7 +10,7 @@ export type OCRResult = {
   raw_data?: string;
 };
 
-export type Provider = 'gemini' | 'mistral' | 'glm' | 'typhoon' | 'ocrspace';
+export type Provider = 'mistral' | 'glm' | 'typhoon' | 'ocrspace';
 
 const SYSTEM_PROMPT = `You are a Thai bank slip OCR expert. 
 Extract the following information from the bank slip image and return it as JSON:
@@ -36,8 +36,7 @@ export async function performOCR(provider: Provider, imageData: string): Promise
   const base64Content = imageData.split(',')[1] || imageData;
 
   switch (provider) {
-    case 'gemini':
-      return callGemini(apiKey, base64Content);
+
     case 'mistral':
       return callMistral(apiKey, base64Content);
     case 'typhoon':
@@ -51,25 +50,7 @@ export async function performOCR(provider: Provider, imageData: string): Promise
   }
 }
 
-async function callGemini(apiKey: string, base64: string): Promise<OCRResult> {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      contents: [{
-        parts: [
-          { text: SYSTEM_PROMPT },
-          { inline_data: { mime_type: 'image/jpeg', data: base64 } }
-        ]
-      }]
-    })
-  });
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  return { ...parseJSON(text), raw_data: JSON.stringify(data, null, 2) };
-}
 
 async function callTyphoon(apiKey: string, base64: string): Promise<OCRResult> {
   const url = 'https://api.opentyphoon.ai/v1/ocr';
@@ -131,10 +112,7 @@ async function callTyphoon(apiKey: string, base64: string): Promise<OCRResult> {
 }
 
 async function callMistral(apiKey: string, base64: string): Promise<OCRResult> {
-  // Mistral OCR usually returns markdown, but we can ask for JSON in the prompt
-  // Note: Mistral's /v1/ocr is specialize, but /v1/chat/completions with pixtral works too.
-  // We'll use the Chat API with vision support (pixtral-12b-2409) for JSON flexibility.
-  const url = 'https://api.mistral.ai/v1/chat/completions';
+  const url = 'https://api.mistral.ai/v1/ocr';
   const response = await fetch(url, {
     method: 'POST',
     headers: {
@@ -142,24 +120,20 @@ async function callMistral(apiKey: string, base64: string): Promise<OCRResult> {
       'Authorization': `Bearer ${apiKey}`
     },
     body: JSON.stringify({
-      model: 'pixtral-12b-2409',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: SYSTEM_PROMPT },
-            { type: 'image_url', image_url: `data:image/jpeg;base64,${base64}` }
-          ]
-        }
-      ],
-      response_format: { type: 'json_object' }
+      model: 'mistral-ocr-latest',
+      document: {
+        type: 'image_url',
+        image_url: `data:image/jpeg;base64,${base64}`
+      },
+      include_image_base64: true
     })
   });
 
   const data = await response.json();
-  const text = data.choices?.[0]?.message?.content || '';
-  return { ...parseJSON(text), raw_data: JSON.stringify(data, null, 2) };
+  const text = data.pages?.map((p: any) => p.markdown).join('\n') || '';
+  return { ...extractThaiSlipData(text, data), raw_data: JSON.stringify(data, null, 2) };
 }
+
 
 async function callGLM(apiKey: string, base64: string): Promise<OCRResult> {
   const url = 'https://api.z.ai/api/paas/v4/layout_parsing';
