@@ -42,7 +42,6 @@ const REGEX = {
 };
 
 // --- Pure Utility Functions ---
-const pipe = <T>(...fns: Array<(arg: T) => T>) => (value: T) => fns.reduce((acc, fn) => fn(acc), value);
 
 const clean = (s: string): string => s.replace(/[*#]/g, '').trim();
 const isDate = (str: string): boolean => REGEX.DATE.some(r => r.test(str)) || /(\d{1,2}[:.]\d{2})/.test(str);
@@ -58,7 +57,7 @@ const isName = (str: string): boolean => {
 export const extractThaiSlipData = (text: string): OCRResult => {
   const lines = text.split('\n').map(l => l.trim()).filter(l => l !== '');
   const sections = text.split(/\n?#{1,6}\s+/).map(s => s.trim()).filter(s => s !== '');
-  
+
   let sender_name = '', sender_bank = '', receiver_name = '', receiver_bank = '';
 
   const relevantSections = sections.filter(s => !['โอนเงินสำเร็จ', 'transfer successful'].includes(s.split('\n')[0].toLowerCase()) || s.includes('XXX'));
@@ -111,7 +110,7 @@ const withTyphoonRefinement = (res: OCRResult): OCRResult => {
   const text = res.raw_data || '';
   const fromMatch = text.match(/#{1,6}\s*จาก\s*\n+([^\n]+)\n+([^\n]+)/i);
   const toMatch = text.match(/#{1,6}\s*ไปยัง\s*\n+([^\n]+)\n+([^\n]+)/i);
-  
+
   return {
     ...res,
     ...(fromMatch && { sender_name: clean(fromMatch[1]), sender_bank: clean(fromMatch[2]) }),
@@ -151,7 +150,7 @@ const IO = {
     const data = await res.json();
     const content = data.results?.[0]?.message?.choices?.[0]?.message?.content || '';
     let text = content;
-    try { text = JSON.parse(content).natural_text || content; } catch (e) {}
+    try { text = JSON.parse(content).natural_text || content; } catch (e) { }
     return { text, data };
   },
 
@@ -172,7 +171,7 @@ const IO = {
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
       body: JSON.stringify({
         model: 'qwen-vl-ocr',
-        messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }, { type: 'text', text: 'Extract Thai bank slip text.' }]}]
+        messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: `data:image/jpeg;base64,${base64}` } }, { type: 'text', text: 'Extract Thai bank slip text.' }] }]
       })
     });
     const data = await res.json();
@@ -195,7 +194,7 @@ export async function performOCR(provider: Provider, imageData: string): Promise
 
   const base64 = imageData.split(',')[1] || imageData;
   const { text, data, extra } = await IO[provider](apiKey, base64);
-  
+
   const resultWithRaw = extractThaiSlipData(text);
 
   // Provider-specific composition
